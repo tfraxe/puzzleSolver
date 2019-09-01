@@ -1,3 +1,18 @@
+'''
+------ TO-DO -------
+
+1) Implementar função solucao(node): constrói a solução (sequência de movimentos necessários para atingir node)
+a partir do nó passado como argumento
+
+2) Implementar função que concretiza a busca em largura a partir de generic_search.
+
+3) Implementar função que concretiza A* a partir de generic_search.
+	3.1.) Implementar função heurística pecas_fora_lugar(estado)
+	3.2.) Implementar função heurística dist_ate_objetivo(estado)   
+
+'''
+
+
 
 #Esta função verifica se o tabuleiro entrado é válido e retorna o índice do elemento 0
 def tabuleiro_valido(tab):
@@ -63,6 +78,8 @@ def gerar_proximos(estado):
 	pos_cima  = pos_vazio - 3
 	pos_baixo = pos_vazio + 3
 
+	retorno = []
+
 	if (pos_dir) % 3 != 0:
 		tab_direita = tabuleiro.copy()
 		
@@ -70,12 +87,18 @@ def gerar_proximos(estado):
 		
 		tab_direita = "".join(tab_direita)
 
+		estado_direita = (tab_direita, pos_dir)
+		retorno.append( (estado_direita, 'D'))
+
 	if (pos_esq) % 3 != 2:
 		tab_esquerda = tabuleiro.copy()
 		
 		tab_esquerda[pos_esq], tab_esquerda[pos_vazio] = tab_esquerda[pos_vazio], tab_esquerda[pos_esq]
 		
 		tab_esquerda = "".join(tab_esquerda)
+		
+		estado_esquerda = (tab_esquerda, pos_esq)
+		retorno.append( (estado_esquerda, 'E'))
 	
 	if (pos_cima) >= 0:
 		tab_cima = tabuleiro.copy()
@@ -83,6 +106,9 @@ def gerar_proximos(estado):
 		tab_cima[pos_cima], tab_cima[pos_vazio] = tab_cima[pos_vazio], tab_cima[pos_cima]	
 		
 		tab_cima = "".join(tab_cima)
+
+		estado_cima = (tab_cima, pos_cima)
+		retorno.append( (estado_cima, 'C'))
 	
 	if (pos_baixo) <= 8:
 		tab_baixo = tabuleiro.copy()
@@ -91,7 +117,10 @@ def gerar_proximos(estado):
 		
 		tab_baixo = "".join(tab_baixo)
 
-	return (tab_esquerda, pos_esq), (tab_direita, pos_dir), (tab_cima, pos_cima), (tab_baixo, pos_baixo)	
+		estado_baixo = (tab_baixo, pos_baixo)
+		retorno.append( (estado_baixo, 'B'))
+
+	return retorno
 
 from collections import namedtuple
 N = namedtuple("N", "custo estado pai action")
@@ -100,20 +129,54 @@ class Node(N):
 	def __lt__(self, other):
 		return self[0] < other[0]
 
-def generic_search(estado_inicial, fronteira):
+'''
+Esta função implementa uma busca genérica.
+
+Para busca em largura: fronteira é um OrderedDict e heur() sempre retorna 0. 
+Um OrderedDict mantém a ordem das inclusões e garante um tempo médio O(1) para testes de pertinência.
+Além disso, permite que façamos a remoção FIFO de elementos. Para garantir esse comportamento, vamos 
+"embrulhar" a classe OrderedDict em uma outra que padroniza a remoção FIFO, sem nos obrigar a usar o argumento
+posicional. 
+
+Para A*: fronteira é um PQDict e heur() pode ser o número de peças fora de lugar ou a distância de manhattan
+O PQDict permite que possamos atualizar os valores de uma fila de prioridades. As estruturas padrões de PQ do Python
+não permitem isso. 
+
+'''
+
+def generic_search(estado_inicial, fronteira, heur):
 	
-	'''
-	Comentário sobre estrutura Node
-	'''
 	no_inicial = Node(custo=0, estado=estado_inicial, pai=(), action='')
 	fronteira[no_inicial.estado[0]] = no_inicial
 	'''
-	Este conjunto irá guardar todos os tabuleiro que já foram explorados durante a busca. 
+	Este conjunto irá guardar todos os tabuleiros que já foram explorados durante a busca. 
 	Não faz sentido "visitar" um tabuleiro já explorado, caso contrário entraríamos possivelmente num loop infinito
 	'''
 	tabuleiros_explorados = set()
 
-	#while(True):
+	while(True):
+		tab, node = fronteira.popitem()
+		if check_sol(tab):
+			return solucao(node) #falta definir função solucao
+		else:
+			tabuleiros_explorados.add(tab)
+			for estado, action in gerar_proximos(node.estado):
+				novo_no = Node(custo=node.custo + 1 + heur(), estado=estado, pai=node, action=action)
+				
+				em_exp = estado[0] in tabuleiros_explorados
+				em_frt = estado[0] in fronteira
+				if ((not em_exp) and (not em_frt)) or (em_frt and (fronteira[estado[0]].custo > novo_no.custo)):
+					fronteira[estado[0]] = novo_no #insere ou atualiza nó.
+
+				'''
+				if (estado[0] not in tabuleiros_explorados) and (estado[0] not in fronteira):
+					fronteira[estado[0]] = novo_no #insere novo nó
+				elif (estado[0] in fronteira) and (fronteira[estado[0]].custo > novo_no.custo):
+					fronteira[estado[0]] = novo_no #atualiza nó.
+
+				'''
+			
+			
 
 
 valido = False
