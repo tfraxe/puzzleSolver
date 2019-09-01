@@ -36,6 +36,8 @@ def check_sol(tab):
 			return False
 		indice += 1
 	return True
+
+
 '''
 Esta função gera os próximos estados possíveis do tabuleiro a partir do estado dado como argumento.
 Consideram-se aqui apenas os estados gerados a partir de um único movimento do elemento vazio.
@@ -46,6 +48,7 @@ Se pos(vazio) - 3 < 0, então não pode ir para cima.
 Se pos(vazio) + 3 > 8, então não pode ir para baixo.
 
 '''
+
 def gerar_proximos(estado):
 	tab_esquerda = []
 	tab_direita  = []
@@ -73,12 +76,14 @@ def gerar_proximos(estado):
 		tab_esquerda[pos_esq], tab_esquerda[pos_vazio] = tab_esquerda[pos_vazio], tab_esquerda[pos_esq]
 		
 		tab_esquerda = "".join(tab_esquerda)
+	
 	if (pos_cima) >= 0:
 		tab_cima = tabuleiro.copy()
-		print(tab_cima)
+
 		tab_cima[pos_cima], tab_cima[pos_vazio] = tab_cima[pos_vazio], tab_cima[pos_cima]	
 		
 		tab_cima = "".join(tab_cima)
+	
 	if (pos_baixo) <= 8:
 		tab_baixo = tabuleiro.copy()
 		
@@ -88,7 +93,27 @@ def gerar_proximos(estado):
 
 	return (tab_esquerda, pos_esq), (tab_direita, pos_dir), (tab_cima, pos_cima), (tab_baixo, pos_baixo)	
 
+from collections import namedtuple
+N = namedtuple("N", "custo estado pai action")
+#Isto servirá apenas para garantir que as comparações na heap ocorram apenas entre os primeiros elementos de Node
+class Node(N):
+	def __lt__(self, other):
+		return self[0] < other[0]
 
+def generic_search(estado_inicial, fronteira):
+	
+	'''
+	Comentário sobre estrutura Node
+	'''
+	no_inicial = Node(custo=0, estado=estado_inicial, pai=(), action='')
+	fronteira[no_inicial.estado[0]] = no_inicial
+	'''
+	Este conjunto irá guardar todos os tabuleiro que já foram explorados durante a busca. 
+	Não faz sentido "visitar" um tabuleiro já explorado, caso contrário entraríamos possivelmente num loop infinito
+	'''
+	tabuleiros_explorados = set()
+
+	#while(True):
 
 
 valido = False
@@ -108,9 +133,3 @@ print(estado_inicial)
 print(check_sol(tabuleiro))
 print(gerar_proximos(estado_inicial))
 
-'''
-Este conjunto irá guardar todos os tabuleiro que já foram explorados durante a busca. 
-Não faz sentido "visitar" um tabuleiro já explorado, caso contrário entraríamos possivelmente num loop infinito
-'''
-
-tabuleiros_explorados = set()
