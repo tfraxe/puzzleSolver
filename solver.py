@@ -122,8 +122,19 @@ def gerar_proximos(estado):
 
 	return retorno
 
+def solucao(node):
+	sol_string = node.action
+	node_pai = node.pai 
+
+	while(node_pai != None):
+		node = node_pai
+		sol_string = node.action + sol_string
+		node_pai = node.pai
+		
+	return sol_string
+
 from collections import namedtuple
-N = namedtuple("N", "custo estado pai action")
+N = namedtuple("N", "custo estado pai action custo_sheur")
 #Isto servirá apenas para garantir que as comparações na heap ocorram apenas entre os primeiros elementos de Node
 class Node(N):
 	def __lt__(self, other):
@@ -146,7 +157,7 @@ não permitem isso.
 
 def generic_search(estado_inicial, fronteira, heur):
 	
-	no_inicial = Node(custo=0, estado=estado_inicial, pai=(), action='')
+	no_inicial = Node(custo=0, estado=estado_inicial, pai=None, action='', custo_sheur=0)
 	fronteira[no_inicial.estado[0]] = no_inicial
 	'''
 	Este conjunto irá guardar todos os tabuleiros que já foram explorados durante a busca. 
@@ -157,14 +168,26 @@ def generic_search(estado_inicial, fronteira, heur):
 	while(True):
 		tab, node = fronteira.popitem()
 		if check_sol(tab):
-			return solucao(node) #falta definir função solucao
+			print(node.custo)
+			sol = solucao(node)
+			#print(sol)
+			#print(len(tabuleiros_explorados))
+			return sol #falta definir função solucao
 		else:
 			tabuleiros_explorados.add(tab)
+			#print(solucao(node))
 			for estado, action in gerar_proximos(node.estado):
-				novo_no = Node(custo=node.custo + 1 + heur(), estado=estado, pai=node, action=action)
-				
+				novo_no = Node(custo=node.custo_sheur + 1 + heur(estado[0]), estado=estado, pai=node, action=action, custo_sheur = node.custo_sheur + 1)
+
+				'''
+				if check_sol(estado[0]):
+					return solucao(novo_no)
+				'''
 				em_exp = estado[0] in tabuleiros_explorados
 				em_frt = estado[0] in fronteira
+				#if(em_frt):
+					#print(f"Custo do novo nó: {novo_no.custo}")
+					#print(f"Custo do nó já na fronteira: {fronteira[estado[0]].custo}")   
 				if ((not em_exp) and (not em_frt)) or (em_frt and (fronteira[estado[0]].custo > novo_no.custo)):
 					fronteira[estado[0]] = novo_no #insere ou atualiza nó.
 
@@ -175,8 +198,78 @@ def generic_search(estado_inicial, fronteira, heur):
 					fronteira[estado[0]] = novo_no #atualiza nó.
 
 				'''
+
 			
 			
+from collections import OrderedDict
+
+class ODWrapper(OrderedDict):
+	def popitem(self):
+		return OrderedDict.popitem(self, last=False)
+
+def busca_em_largura(estado_inicial):
+	def heur(tab_esquerda):
+		return 0
+	fronteira = ODWrapper()
+	return generic_search(estado_inicial, fronteira, heur)
+
+def n_pecas_fora_do_lugar(tanb):
+	n_pecas = 0
+	for i, char in enumerate(tanb):
+		if char != '0':
+			if char != str(i + 1):
+				n_pecas += 1
+		else:
+			#if i != 8:
+				#n_pecas += 1
+			continue
+	return n_pecas
+
+def manhattan(tanb):
+	soma = 0
+	for ind, elem in enumerate(tanb):
+		i, j = divmod(ind, 3)
+
+		if elem != '0':
+			ic, jc = divmod(int(elem) - 1, 3)
+		else:
+			continue
+
+		num_mov_i = abs(i - ic)
+		num_mov_j = abs(j - jc)
+		num_mov = num_mov_i + num_mov_j
+
+		soma += num_mov
+	return soma
+
+from pqdict import minpq
+def a_star(estado_inicial):
+	front = minpq()
+	return generic_search(estado_inicial, front, manhattan)
+
+def computar_peso(ei, sol):
+	ind0 = ei[1]
+	list_sol = list(ei[0])
+	soma = 0
+	for elem in sol:
+		
+		if elem == "C":
+			list_sol[ind0], list_sol[ind0 - 3] = list_sol[ind0 - 3], list_sol[ind0]
+			ind0 = ind0 - 3
+		elif elem == "B":
+			list_sol[ind0], list_sol[ind0 + 3] = list_sol[ind0 + 3], list_sol[ind0]
+			ind0 = ind0 + 3
+		elif elem == "E":
+			list_sol[ind0], list_sol[ind0 - 1] = list_sol[ind0 - 1], list_sol[ind0]
+			ind0 = ind0 - 1
+		else:
+			list_sol[ind0], list_sol[ind0 + 1] = list_sol[ind0 + 1], list_sol[ind0]
+			ind0 = ind0 + 1
+		soma += n_pecas_fora_do_lugar("".join(list_sol)) + 0
+
+		#print("".join(list_sol))
+	print("".join(list_sol))
+	return soma
 
 
 valido = False
@@ -192,7 +285,21 @@ O estado será representado por uma tupla (string, int) em que string representa
 e int a posição do elemento 0 (espaço vazio)
 '''
 estado_inicial = (tabuleiro, indice0)
-print(estado_inicial)
-print(check_sol(tabuleiro))
-print(gerar_proximos(estado_inicial))
+#print(estado_inicial)
+print(f" Número de peças fora do lugar: {n_pecas_fora_do_lugar(tabuleiro)}")
+print(f"Manhattan distance: {manhattan(tabuleiro)}")
+
+
+solution = a_star(estado_inicial)
+print(f"Number of moves manhattan: {len(solution)}\n Solution: {solution}")
+solucao2 = busca_em_largura(estado_inicial)
+print(f"Number of moves bfs: {len(solucao2)}\n Solution: {solucao2} ")
+
+
+print(f" Peso da solução a_star: {computar_peso(estado_inicial, solution)} ")
+print(f" Peso da solução busca em largura: {computar_peso(estado_inicial, solucao2)} ")
+
+
+#print(check_sol(tabuleiro))
+#print(gerar_proximos(estado_inicial))
 
